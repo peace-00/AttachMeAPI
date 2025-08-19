@@ -11,6 +11,14 @@ app.use(cors())
 //access static files
 app.use("/uploads",express.static('uploads'))
 
+// routes
+const userAuth=require('./routes/loginRoute')
+app.use("/users",userAuth)
+
+const jobListing=require("./routes/jobListingRouter")
+app.use("/jobs",jobListing)
+
+
 //connecting to database
 mongoose.connect(process.env.MONGO_URI)
 .then(()=>console.log("MongoDB Connected"))
