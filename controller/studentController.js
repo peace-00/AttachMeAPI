@@ -1,6 +1,6 @@
 // controller/studentController.js
 const { Student, User } = require("../model/attachmedb");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const fs = require("fs");
 
 exports.registerStudent = async (req, res) => {
