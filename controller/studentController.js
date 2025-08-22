@@ -1,51 +1,40 @@
-const { Student, User } = require('../model/attachmedb');
-const bcrypt = require('bcryptjs');
-const fs = require('fs');
+// controller/studentController.js
+const { Student, User } = require("../model/attachmedb");
+const bcrypt = require("bcryptjs");
+const fs = require("fs");
 
-// Register Student
 exports.registerStudent = async (req, res) => {
   try {
     const {
       name,
       email,
       password,
-      role, // should be "student"
+      role,
       phone,
       nationalId,
       universityName,
       courseName,
       yearOfStudy,
       skill,
-      linkedIn,
+      linkedIn
     } = req.body;
 
-    // Handle profile photo and resume
-    let profilePhotoPath = null;
-    let resumePath = null;
+    // Handle uploaded files
+    let profilePhotoPath = req.files?.profilePhoto?.[0]?.path.replace(/\\/g, "/") || null;
+    let resumePath = req.files?.resume?.[0]?.path.replace(/\\/g, "/") || null;
 
-    if (req.files) {
-      if (req.files.profilePhoto) {
-        profilePhotoPath = req.files.profilePhoto[0].path.replace(/\\/g, '/');
-      }
-      if (req.files.resume) {
-        resumePath = req.files.resume[0].path.replace(/\\/g, '/');
-      }
-    }
-
-    // Check if student already exists by nationalId
-    const existStudent = await Student.findOne({ nationalId });
-    if (existStudent) {
+    // Check if student already exists
+    if (await Student.findOne({ nationalId })) {
       if (profilePhotoPath) fs.unlinkSync(profilePhotoPath);
       if (resumePath) fs.unlinkSync(resumePath);
-      return res.status(409).json({ message: 'National ID already registered!' });
+      return res.status(409).json({ message: "National ID already registered!" });
     }
 
-    // Check if user already exists by email
-    const userExist = await User.findOne({ email });
-    if (userExist) {
+    // Check if user already exists
+    if (await User.findOne({ email })) {
       if (profilePhotoPath) fs.unlinkSync(profilePhotoPath);
       if (resumePath) fs.unlinkSync(resumePath);
-      return res.status(409).json({ message: 'Email already exists!' });
+      return res.status(409).json({ message: "Email already exists!" });
     }
 
     // Create new student
@@ -60,25 +49,24 @@ exports.registerStudent = async (req, res) => {
       profilePhoto: profilePhotoPath,
       resume: resumePath,
     });
-
     const savedStudent = await newStudent.save();
 
-    // Hash password for User
+    // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 8);
     const newUser = new User({
       name,
       email,
       role,
       phone,
-      profilePhoto: profilePhotoPath,
       password: hashedPassword,
       student: savedStudent._id,
+      profilePhoto: profilePhotoPath,
+      resume: resumePath,
     });
-
     const savedUser = await newUser.save();
 
     res.status(201).json({
-      message: 'Student account created successfully!',
+      message: "Student account created successfully!",
       student: savedStudent,
       user: savedUser,
     });
@@ -86,15 +74,18 @@ exports.registerStudent = async (req, res) => {
   } catch (error) {
     console.error(error);
 
-    // Remove uploaded files if any error occurs
-    if (req.files) {
-      if (req.files.profilePhoto) fs.unlinkSync(req.files.profilePhoto[0].path);
-      if (req.files.resume) fs.unlinkSync(req.files.resume[0].path);
+    // Remove uploaded files if error occurs
+    if (req.files?.profilePhoto?.[0]?.path) {
+      try { fs.unlinkSync(req.files.profilePhoto[0].path); } catch (e) {}
+    }
+    if (req.files?.resume?.[0]?.path) {
+      try { fs.unlinkSync(req.files.resume[0].path); } catch (e) {}
     }
 
-    res.status(500).json({ message: 'Server error occurred.' });
+    res.status(500).json({ message: "Server error occurred." });
   }
 };
+
 
 exports.loginStudent=async(req,res)=>{
     const {email,password}=req.body
