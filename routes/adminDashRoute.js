@@ -4,6 +4,7 @@ const adminDashController = require("../controller/adminDashController");
 // authorization
 
 const { auth, authorizeRoles } = require("../middleware/auth");
-router.get("/",auth,authorizeRoles('admin'),adminDashController.adminDashStats);
+router.get("/dashboard-stats",auth,authorizeRoles('admin'),adminDashController.adminDashStats);
+
 
 module.exports=router

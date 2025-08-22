@@ -1,4 +1,4 @@
-const {User,Student,Company,JobListing,Application}=require("../model/attachmedb")
+const {User,Student,Company,JobListing}=require("../model/attachmedb")
 
 //dashboard stats
 exports.adminDashStats=async (req,res) => {
@@ -7,8 +7,7 @@ exports.adminDashStats=async (req,res) => {
             User.countDocuments(),
             Student.countDocuments(),
             Company.countDocuments(),
-            JobListing.countDocuments(),
-            Application.countDocuments()
+            JobListing.countDocuments()
         ])
 
         // get recent students registered
@@ -33,7 +32,6 @@ exports.adminDashStats=async (req,res) => {
             totalStudents,
             totalCompanies,
             totalJobs,
-            totalApplications,
             recentStudents,
             recentCompanies,
             recentJobs

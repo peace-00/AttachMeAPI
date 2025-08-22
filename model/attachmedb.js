@@ -7,8 +7,8 @@ const userSchema=new Schema({
     email:{type:String, required:true,unique:true},
     password:{type:String,required:true,unique:true},
     phone:{type:"String",required:true}, 
-    profilePhoto:{type:String,default:null},
-    role:{type:String,enum:['student','employer','company','admin'],required:true},
+    profilePhoto:{type:String,required:false, default:null},
+    role:{type:String,enum:['student','company','admin'],required:true},
     isActive:{type:Boolean,default:true},
     company:{type:mongoose.Schema.Types.ObjectId,ref:"Company",default:null},
     student:{type:mongoose.Schema.Types.ObjectId,ref:"Student",default:null}
@@ -17,6 +17,7 @@ const userSchema=new Schema({
 // student schema
 const studentSchema=new Schema({
     name:{type:String},
+    profilePhoto:{type:String,required:false, default:null},
     nationalId:{type:Number,required:true},
     universityName:{type:String,required:true},
     courseName:{type:String,required:true},
@@ -27,10 +28,10 @@ const studentSchema=new Schema({
     isVerified:{type:Boolean,default:false}
 },{timestamps:true})
 
-//employer schema
 //Company schema
 const companySchema=new Schema({
     name:{type:String},
+    profilePhoto:{type:String,required:false, default:null},
     registrationNumber:{type:String},
     location:{type:String,requires:true},
     description:{type:String},
@@ -44,7 +45,7 @@ const jobListingSchema=new Schema({
     jobTitle:{type:String},
     description:{type:String},
     postedBy:{type:mongoose.Schema.Types.ObjectId,ref:"Company",default:null},
-    location:{type:String},
+    type:{type:String,enum:['attachment','internship'],required:true},
     requirements:[{type:String}],
     deadline:{type:Date},
     isApproved:{type:Boolean,default:true}

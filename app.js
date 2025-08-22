@@ -24,8 +24,14 @@ app.use("/api/application",application)
 const student=require("./routes/studentRoute")
 app.use("/api/student",student)
 
-const admin=require("./routes/adminDashRoute")
-app.use("/api/admin",admin)
+const adminDash=require("./routes/adminDashRoute")
+app.use("/api/admindash",adminDash)
+
+const studentDash=require("./routes/studentDashRoute")
+app.use("/api/studentdash",studentDash)
+
+const companyDash=require("./routes/companyDashRoute")
+app.use("/api/companydash",companyDash)
 
 //connecting to database
 mongoose.connect(process.env.MONGO_URI)
@@ -33,7 +39,7 @@ mongoose.connect(process.env.MONGO_URI)
 .catch(err=>console.log("MongoDB Connection failed.",err))
 
 // server listener
-const PORT=3001
+const PORT=3000
  
 app.listen(PORT,()=>{
     console.log(`Server running on port ${PORT}`)

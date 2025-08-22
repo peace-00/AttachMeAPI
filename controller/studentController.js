@@ -1,50 +1,95 @@
 const {Student,User, Application}=require("../model/attachmedb")
 const bcrypt=require("bcrypt")
 const jwt=require('jsonwebtoken')
+const multer=require('multer')
+const fs=require('fs')
+const path=require('path')
+
+const uploads=multer({dest:'uploads/'})
+exports.uploadStudentPhoto=uploads.single('photo')
 
 //register logic
-exports.registerStudent=async(req,res)=>{
+exports.registerStudent = async (req, res) => {
+  try {
     const {
-        name,
-        email,
-        password,
-        role,
-        phone,
-        nationalId,
-        universityName,
-        courseName,
-        yearOfStudy}=req.body
-    //check if user exists 
-    const existStudent=await Student.findOne({nationalId})
-    if(existStudent){
-        return res.status(409).json({message:"National Id already registered!"})
-    }
-    const userExist=await User.findOne({email})
-    if(userExist){
-        return res.status(409).json({message:"Email already exists!"})
-    }
-    const newStudent=new Student({
-        name,
-        nationalId,
-        universityName,
-        courseName,
-        yearOfStudy
-    })
-    const savedStudent=await newStudent.save()
-    
-    // hash password
-    const hashedPassword=await bcrypt.hash(password,8)
-    const newUser=new User({
-        name,
-        email,
-        role,
-        phone,
-        password:hashedPassword,
-        student:savedStudent._id})
+      name,
+      email,
+      password,
+      role,
+      phone,
+      nationalId,
+      universityName,
+      courseName,
+      yearOfStudy,
+    } = req.body;
 
-    const savedUser=await newUser.save()
-    res.status(201).json({message:"Student and User accounts created Succcessfully!",savedStudent,savedUser})
-}
+    // Multer stores file info in req.file
+    let photoPath = null;
+    if (req.file) {
+      photoPath = req.file.path.replace(/\\/g, '/'); // normalize for Windows
+    }
+
+    // Check if student exists
+    const existStudent = await Student.findOne({ nationalId });
+    if (existStudent) {
+      // If uploaded a photo, delete it to avoid orphan files
+      if (photoPath) fs.unlinkSync(photoPath);
+
+      return res.status(409).json({ message: 'National Id already registered!' });
+    }
+
+    // Check if user exists
+    const userExist = await User.findOne({ email });
+    if (userExist) {
+      if (photoPath) fs.unlinkSync(photoPath);
+
+      return res.status(409).json({ message: 'Email already exists!' });
+    }
+
+    // Create new student
+    const newStudent = new Student({
+      name,
+      nationalId,
+      universityName,
+      courseName,
+      yearOfStudy,
+      profilePhoto: photoPath,
+    });
+
+    const savedStudent = await newStudent.save();
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 8);
+
+    const newUser = new User({
+      name,
+      email,
+      role,
+      phone,
+      profilePhoto: photoPath,
+      password: hashedPassword,
+      student: savedStudent._id,
+    });
+
+    const savedUser = await newUser.save();
+
+    res.status(201).json({
+      message: 'Student and User accounts created successfully!',
+      savedStudent,
+      savedUser,
+    });
+  } catch (error) {
+    console.error(error);
+    // Delete uploaded file if error occurs
+    if (req.file && req.file.path) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ message: 'Server error occurred.' });
+  }
+};
+
+
+
 
 exports.loginStudent=async(req,res)=>{
     const {email,password}=req.body
@@ -192,8 +237,8 @@ exports.deletedStudent=async(req,res)=>{
     }  
 }
 
-// get all application
-exports.getAllApplications=async(req,res)=>{
+// get all applications by the student
+exports.getAllApplicationsByStudent=async(req,res)=>{
     try {
         //get logged in user
         const userId=req.user.userId

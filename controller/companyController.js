@@ -1,51 +1,79 @@
-const {Company, JobListing, User}=require("../model/attachmedb")
+const {Company, JobListing, User,Application}=require("../model/attachmedb")
 const bcrypt=require("bcrypt")
 const jwt=require('jsonwebtoken')
 
 //register logic
-exports.registerCompany=async(req,res)=>{
+exports.registerCompany = async (req, res) => {
+  try {
     const {
-        name,
-        email,
-        password,
-        role,
-        phone,
-        registrationNumber,
-        location,
-        description,
-        industry}=req.body
+      name,
+      email,
+      password,
+      role,
+      phone,
+      registrationNo, // Correct key name matching frontend
+      location,
+      description,
+      industry,
+      website
+    } = req.body;
 
-    //check if company exists 
-    const existCompany=await Student.findOne({registrationNumber})
-    if(existCompany){
-        return res.status(409).json({message:"Registration Number already registered!"})
+    // Check if company registration number already exists
+    const existingCompany = await Company.findOne({ registrationNo });
+    if (existingCompany) {
+      return res.status(409).json({ message: "Registration Number already registered!" });
     }
-    const userExist=await User.findOne({email})
-    if(userExist){
-        return res.status(409).json({message:"Email already exists!"})
-    }
-    const newCompany=new Company({
-        name,
-        registrationNumber,
-        location,
-        description,
-        industry
-    })
-    const savedCompany=await newCompany.save()
-    
-    // hash password
-    const hashedPassword=await bcrypt.hash(password,8)
-    const newUser=new User({
-        name,
-        email,
-        role,
-        phone,
-        password:hashedPassword,
-        company:savedCompany._id})
 
-    const savedUser=await newUser.save()
-    res.status(201).json({message:"Company and User accounts created Succcessfully!",savedCompany,savedUser})
-}
+    // Check if email is already taken by any user
+    const userExist = await User.findOne({ email });
+    if (userExist) {
+      return res.status(409).json({ message: "Email already exists!" });
+    }
+
+    // Handle file upload
+    const profilePhoto = req.file ? req.file.path : null;
+
+    // Create new Company
+    const newCompany = new Company({
+      name,
+      registrationNo,
+      location,
+      description,
+      industry,
+      website,
+      profilePhoto
+    });
+
+    const savedCompany = await newCompany.save();
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 8);
+
+    // Create linked User account
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      phone,
+      profilePhoto,
+      company: savedCompany._id,
+    });
+
+    const savedUser = await newUser.save();
+
+    res.status(201).json({
+      message: "Company and User accounts created successfully!",
+      newCompany: savedCompany,
+      user: savedUser,
+    });
+
+  } catch (err) {
+    console.error("Company registration failed:", err);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
 
 
 exports.loginCompany=async(req,res)=>{
@@ -192,6 +220,39 @@ exports.getAllJobsByCompany = async (req, res) => {
     const jobs = await JobListing.find({postedBy: user.company._id,})
     .populate("postedBy", "name email phone");
     res.status(200).json(jobs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get all applications for a specific job
+exports.getApplicationsForJob = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const jobId = req.params.jobId;
+
+    // Get user and their company
+    const user = await User.findById(userId).populate("company");
+    if (!user || (req.user.role !== 'company' && req.user.role !== 'admin')) {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    // Ensure that this job belongs to this company
+    const job = await JobListing.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    if (req.user.role === 'company' && job.postedBy.toString() !== user.company._id.toString()) {
+      return res.status(403).json({ message: "Access denied to this job's applications" });
+    }
+
+    // Find all applications for the job
+    const applications = await Application.find({ job: jobId })
+      .populate("applicant", "name email phone")
+      .populate("job", "title");
+
+    res.status(200).json(applications);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
