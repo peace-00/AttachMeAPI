@@ -7,7 +7,7 @@ const userSchema=new Schema({
     email:{type:String, required:true,unique:true},
     password:{type:String,required:true,unique:true},
     phone:{type:"String",required:true}, 
-    profilePhoto:{type:String,required:false, default:null},
+    profilePhoto:{type:String,required:true, default:null},
     role:{type:String,enum:['student','company','admin'],required:true},
     isActive:{type:Boolean,default:true},
     company:{type:mongoose.Schema.Types.ObjectId,ref:"Company",default:null},
@@ -17,7 +17,7 @@ const userSchema=new Schema({
 // student schema
 const studentSchema=new Schema({
     name:{type:String},
-    profilePhoto:{type:String,required:false, default:null},
+    profilePhoto:{type:String,required:true, default:null},
     nationalId:{type:Number,required:true},
     universityName:{type:String,required:true},
     courseName:{type:String,required:true},
@@ -31,7 +31,7 @@ const studentSchema=new Schema({
 //Company schema
 const companySchema=new Schema({
     name:{type:String},
-    profilePhoto:{type:String,required:false, default:null},
+    profilePhoto:{type:String,required:true, default:null},
     registrationNumber:{type:String},
     location:{type:String,requires:true},
     description:{type:String},

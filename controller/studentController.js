@@ -1,48 +1,50 @@
-const {Student,User, Application}=require("../model/attachmedb")
-const bcrypt=require("bcrypt")
-const jwt=require('jsonwebtoken')
-const multer=require('multer')
-const fs=require('fs')
-const path=require('path')
+const { Student, User } = require('../model/attachmedb');
+const bcrypt = require('bcryptjs');
+const fs = require('fs');
 
-const uploads=multer({dest:'uploads/'})
-exports.uploadStudentPhoto=uploads.single('photo')
-
-//register logic
+// Register Student
 exports.registerStudent = async (req, res) => {
   try {
     const {
       name,
       email,
       password,
-      role,
+      role, // should be "student"
       phone,
       nationalId,
       universityName,
       courseName,
       yearOfStudy,
+      skill,
+      linkedIn,
     } = req.body;
 
-    // Multer stores file info in req.file
-    let photoPath = null;
-    if (req.file) {
-      photoPath = req.file.path.replace(/\\/g, '/'); // normalize for Windows
+    // Handle profile photo and resume
+    let profilePhotoPath = null;
+    let resumePath = null;
+
+    if (req.files) {
+      if (req.files.profilePhoto) {
+        profilePhotoPath = req.files.profilePhoto[0].path.replace(/\\/g, '/');
+      }
+      if (req.files.resume) {
+        resumePath = req.files.resume[0].path.replace(/\\/g, '/');
+      }
     }
 
-    // Check if student exists
+    // Check if student already exists by nationalId
     const existStudent = await Student.findOne({ nationalId });
     if (existStudent) {
-      // If uploaded a photo, delete it to avoid orphan files
-      if (photoPath) fs.unlinkSync(photoPath);
-
-      return res.status(409).json({ message: 'National Id already registered!' });
+      if (profilePhotoPath) fs.unlinkSync(profilePhotoPath);
+      if (resumePath) fs.unlinkSync(resumePath);
+      return res.status(409).json({ message: 'National ID already registered!' });
     }
 
-    // Check if user exists
+    // Check if user already exists by email
     const userExist = await User.findOne({ email });
     if (userExist) {
-      if (photoPath) fs.unlinkSync(photoPath);
-
+      if (profilePhotoPath) fs.unlinkSync(profilePhotoPath);
+      if (resumePath) fs.unlinkSync(resumePath);
       return res.status(409).json({ message: 'Email already exists!' });
     }
 
@@ -53,20 +55,22 @@ exports.registerStudent = async (req, res) => {
       universityName,
       courseName,
       yearOfStudy,
-      profilePhoto: photoPath,
+      skill,
+      linkedIn,
+      profilePhoto: profilePhotoPath,
+      resume: resumePath,
     });
 
     const savedStudent = await newStudent.save();
 
-    // Hash password
+    // Hash password for User
     const hashedPassword = await bcrypt.hash(password, 8);
-
     const newUser = new User({
       name,
       email,
       role,
       phone,
-      profilePhoto: photoPath,
+      profilePhoto: profilePhotoPath,
       password: hashedPassword,
       student: savedStudent._id,
     });
@@ -74,22 +78,23 @@ exports.registerStudent = async (req, res) => {
     const savedUser = await newUser.save();
 
     res.status(201).json({
-      message: 'Student and User accounts created successfully!',
-      savedStudent,
-      savedUser,
+      message: 'Student account created successfully!',
+      student: savedStudent,
+      user: savedUser,
     });
+
   } catch (error) {
     console.error(error);
-    // Delete uploaded file if error occurs
-    if (req.file && req.file.path) {
-      fs.unlinkSync(req.file.path);
+
+    // Remove uploaded files if any error occurs
+    if (req.files) {
+      if (req.files.profilePhoto) fs.unlinkSync(req.files.profilePhoto[0].path);
+      if (req.files.resume) fs.unlinkSync(req.files.resume[0].path);
     }
+
     res.status(500).json({ message: 'Server error occurred.' });
   }
 };
-
-
-
 
 exports.loginStudent=async(req,res)=>{
     const {email,password}=req.body
